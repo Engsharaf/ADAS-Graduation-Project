@@ -1,270 +1,553 @@
+/****************************************************************************/
+/* Title                 :   ADC_program                                    */
+/* Filename              :   ADC_program.c                                  */
+/* Author                :   Shaban Abdullah Awad                           */
+/* Origin Date           :   Oct 13, 2021                                   */
+/* Version               :   1.0.0                                          */
+/* Compiler              :   mingw GCC                                      */
+/* Target                :   ATmega16 , ATmega32                            */
+/* Notes                 :   None                                           */
+/*                                                                          */
+/****************************************************************************/
 
-/*
- * ADC_program.c
- *
- *  Created on: May 26, 2021
- *      Author: Abdelrahman Sharaf
- */
-#include"../STD_TYPES.h"
-#include "../BIT_math.h"
-#include "ADC_cfg.h"
-#include "ADC_priv.h"
-#include "ADC_int.h"
+/****************************************************************************/
+/******************************  INCLUDES  **********************************/
+#include "STD_TYPES.h"
+#include "errorStates.h"
 
-void (*PF)(void);
-/*****************************************************************************************
- * function name: ADC_vdEnableADC
- * input        :void
- * return type  :void
- * Description  : this function is to enable adc
- * **************************************************************************************
- */
-void ADC_vdEnableADC(void)
+#include "interrupt.h"
+#include "GIE_interface.h"
+
+#include "ADC_private.h"
+#include "ADC_Config.h"
+
+/*********************************************************************************/
+/* Description     : Tow global arrays of pointers to hold the Addresses of      */
+/*                   the functions and its arguments to use the in the           */
+/*                   CallBack.                                                   */
+/*********************************************************************************/
+static volatile void (*ADC_pvidfunISRFunc)(void*)= NULL ;
+
+static volatile void* ADC_pvidISRParameter=  NULL ;
+
+
+/*****************************************************************************/
+/*****************************************************************************/
+/* Function Name   : ADC_enuInit.                                            */
+/* Description     : Utility function to initialize the ADC .                */
+/* Argument        : None .                                                  */
+/* Return          : Error state of type ES_t.                               */
+/**.............**************************************************************/
+ES_t ADC_enuInit(void)
 {
-	SET_BIT(ADC_ADCSRA_REG,ADC_ADEN);
-}
-/*****************************************************************************************
- * function name: ADC_vdDisableADC
- * input        :void
- * return type  :void
- * Description  : this function is to disable adc
- * **************************************************************************************
- */
-void ADC_vdDisableADC(void)
+	ES_t Local_enuErrorState = ES_NOK ;
+
+
+	/*************************************************************************/
+	/*ADC Voltage Reference cases Handling.                                  */
+	/*************************************************************************/
+	ADMUX  &=~((ADC_MSK_BIT<<REFS1)|(ADC_MSK_BIT<<REFS0));
+
+#if      ADC_REF_VOLT   ==    AREF_REF
+	//Do nothing.
+
+#elif    ADC_REF_VOLT   ==    AVCC_REF
+	ADMUX  |=(ADC_MSK_BIT<<REFS0);
+
+#elif    ADC_REF_VOLT   ==    INTERNAL_AREF
+	ADMUX  |=(ADC_MSK_BIT<<REFS1)|(ADC_MSK_BIT<<REFS0);
+
+#else
+#error "The ADC_REF_VOLT value that you Chosen is not Valid!!."
+
+#endif
+
+
+	/****************************************************************************************/
+	/*ADC Prescaler cases Handling and Right Presentation of the ADC result is Selected.    */
+	/****************************************************************************************/
+	ADCSRA  &=~((ADC_MSK_BIT<<ADPS0)|(ADC_MSK_BIT<<ADPS1)|(ADC_MSK_BIT<<ADPS2));
+
+#if      ADC_PRES   ==    PRES_2
+	//Do nothing.
+
+#elif    ADC_PRES   ==    PRES_4
+	ADCSRA |=(ADC_MSK_BIT<<ADPS1);
+
+#elif    ADC_PRES   ==    PRES_8
+	ADCSRA |=(ADC_MSK_BIT<<ADPS0)|(ADC_MSK_BIT<<ADPS1);
+
+#elif    ADC_PRES   ==    PRES_16
+	ADCSRA |=(ADC_MSK_BIT<<ADPS2);
+
+#elif    ADC_PRES   ==    PRES_32
+	ADCSRA |=(ADC_MSK_BIT<<ADPS0)|(ADC_MSK_BIT<<ADPS2);
+
+#elif    ADC_PRES   ==    PRES_64
+	ADCSRA |=(ADC_MSK_BIT<<ADPS1)|(ADC_MSK_BIT<<ADPS2);
+
+#elif    ADC_PRES   ==    PRES_128
+	ADCSRA |=(ADC_MSK_BIT<<ADPS0)|(ADC_MSK_BIT<<ADPS1)|(ADC_MSK_BIT<<ADPS2);
+
+#else
+
+#error "Not valid ADC_PRES value!!."
+
+#endif
+
+	return Local_enuErrorState   ;
+}//End of ADC_enuInit.
+
+
+
+
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuEnable.                                           */
+/* Description     : Utility function to Enable ADC .                         */
+/* Argument        : None .                                                   */
+/* Return          : Error state of type ES_t.                                */
+/**.....................*******************************************************/
+ES_t ADC_enuEnable(void)
 {
-	CLEAR_BIT(ADC_ADCSRA_REG,ADC_ADEN);
+	ES_t Local_enuErrorState = ES_NOK ;
 
-}
-/*****************************************************************************************
- * function name: ADC_vdIntialize
- * input        :void
- * return type  :void
- * Description  : this function is to select voltage reference and ADC_prescalare
- * and setting ADC_ADJUSTMENT
- * **************************************************************************************
- */
-void ADC_vdIntialize(void)
-{
-#if ADC_VOLATGE_REFERENCE==ADC_AREF
-	CLEAR_BIT(ADC_ADMUX_REG,ADC_REFS0);
-	CLEAR_BIT(ADC_ADMUX_REG,ADC_REFS1);
-#endif
-#if ADC_VOLATGE_REFERENCE == ADC_INTERNAL_VCC
-	SET_BIT(ADC_ADMUX_REG,ADC_REFS0);
-	CLEAR_BIT(ADC_ADMUX_REG,ADC_REFS1);
-#endif
-#if ADC_VOLATGE_REFERENCE == ADC_INTERNAL_2_VOLT
-	SET_BIT(ADC_ADMUX_REG,ADC_REFS0);
-	SET_BIT(ADC_ADMUX_REG,ADC_REFS1);
-#endif
-
-	/*
-	 * setting ADC_PRESCALAER
-	 */
-	ADC_ADCSRA_REG = ((ADC_ADCSRA_REG & ~(0x07))|ADC_PRESCALER);
-//	CLEAR_BIT(ADC_ADCSRA_REG,0);
-//	CLEAR_BIT(ADC_ADCSRA_REG,1);
-//	CLEAR_BIT(ADC_ADCSRA_REG,2);
-	/*
-	 * setting ADC_ADJUSTMENT
-	 */
-#if ADC_ADJUSTMENT == ADC_RIGHT_ADJUSTMENT
-	CLEAR_BIT(ADC_ADMUX_REG,ADC_ADLAR);
-#endif
-
-#if ADC_ADJUSTMENT == ADC_LEFT_ADJUSTMENT
-	SET_BIT(ADC_ADMUX_REG,ADC_ADLAR);
-#endif
-
-	ADC_vdEnableADC();
-}
-/*****************************************************************************************
- * function name: ADC_vdGetADC_Value
- * input        :u8channel_id
- * return type  :ADC value
- * Description  : this function is to get ADC value for single channel
- * **************************************************************************************
- */
-u16 ADC_u16GetADC_Value(u8 u8channel_id)
-{
-	/*
-	 * select channel
-	 */
-	if(u8channel_id<8)
+	if( !((ADCSRA>>ADEN)& ADC_MSK_BIT) )
 	{
-		ADC_ADMUX_REG = ((ADC_ADMUX_REG & ~(0x1f) )| u8channel_id );
+		/* Enable ADC .             */
+		ADCSRA |= (ADC_MSK_BIT<<ADEN);
 
-		/*
-		 * start coversion
-		 */
-		SET_BIT(ADC_ADCSRA_REG,ADC_ADSC);
-//		while((GET_BIT(ADC_ADCSRA_REG,ADC_ADIF))==0)
-		while((GET_BIT(ADC_ADCSRA_REG,ADC_ADSC))==1)
-		{
-			/*
-			 * wait untill finish
-			 */
-		}
-		return ADC_ADC_REG;
+		Local_enuErrorState = ES_OK ;
+
 	}
 	else
 	{
-		return INVALID_VALUE;
+		Local_enuErrorState = ES_OK ;
 	}
 
+	return Local_enuErrorState   ;
+}//End of ADC_enuEnable.
 
 
-}
-/*****************************************************************************************
- * function name: ADC_vdGetADC_ValueWithCommon_ADC1
- * input        :u8channel_id
- * return type  :ADC value
- * Description  : this function is to get ADC value for double channel with common
- * 				  negative edge ADC1
- * **************************************************************************************
- */
-u16 ADC_vdGetADC_ValueWithCommon_ADC1(u8 u8channel_id)
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuDisable.                                          */
+/* Description     : Utility function to Disable ADC .                        */
+/* Argument        : None .                                                   */
+/* Return          : Error state of type ES_t.                                */
+/**.....................*******************************************************/
+ES_t ADC_enuDisable(void)
 {
-	/*
-	 * select channel
-	 */
-	ADC_ADMUX_REG = ((ADC_ADMUX_REG & ~(0x1f) )| u8channel_id );
 
-	/*
-	 * enable adc
-	 */
-	ADC_vdEnableADC();
-	/*
-	 * start coversion
-	 */
-	SET_BIT(ADC_ADCSRA_REG,ADC_ADSC);
-	while((GET_BIT(ADC_ADCSRA_REG,ADC_ADSC))==1)
+	ES_t Local_enuErrorState = ES_NOK ;
+
+	if( ((ADCSRA>>ADEN)& ADC_MSK_BIT) )
 	{
-		/*
-		 * wait untill finish
-		 */
-	}
-	return ADC_ADC_REG;
+		/* Disable ADC .             */
+		ADCSRA &=~(ADC_MSK_BIT<<ADEN);
 
-}
-/*****************************************************************************************
- * function name: ADC_vdSetADCISR_Callback
- * input        :pointer to function
- * return type  :void
- * Description  : this function is a call back function setter to set ADC ISR function
- * **************************************************************************************
- */
-void ADC_vdSetADCISR_Callback(void (*callback)(void))
-{
-	PF = callback;
-}
-/*****************************************************************************************
- * function name: ADC_vdSetADCISR_Callback
- * input        :pointer to function
- * return type  :void
- * Description  : this function is a call back function setter to set ADC ISR function
- * **************************************************************************************
- */
-void ADC_vdGetAdcWithInterrupt(u8 u8channel_id)
-{
-	ADC_vdEnableAdcInterrupt();
-	if(u8channel_id<8)
+		Local_enuErrorState = ES_OK ;
+
+	}
+	else
 	{
-		ADC_ADMUX_REG = ((ADC_ADMUX_REG & ~(0x1f) )| u8channel_id );
-
-		/*
-		 * start coversion
-		 */
-		SET_BIT(ADC_ADCSRA_REG,ADC_ADSC);
+		Local_enuErrorState = ES_OK ;
 	}
-}
-u16 ADC_u16ReadADCVal(void)
+
+	/* Report the Final State.   */
+	return Local_enuErrorState    ;
+
+}//End of ADC_enuEnable.
+
+
+
+
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuStartConversion.                                  */
+/* Description     : Utility function to Trigger ADC Start Conversion.        */
+/* Argument        : None .                                                   */
+/* Return          : Error state of type ES_t.                                */
+/**.................***********************************************************/
+ES_t ADC_enuStartConversion(void)
 {
-	return ADC_ADC_REG;
-}
-void ADC_vdEnableAdcInterrupt(void)
+	ES_t Local_enuErrorState = ES_NOK ;
+
+	if( !((ADCSRA>>ADSC)&ADC_MSK_BIT) )
+	{
+		ADCSRA |=(ADC_MSK_BIT<<ADSC);
+
+		Local_enuErrorState = ES_OK;
+	}
+	else
+	{
+		//Do nothing.
+	}
+
+	/* Report the Final State.   */
+	return Local_enuErrorState    ;
+
+}//End of ADC_enuStartConversion.
+
+
+
+
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuPollingSys.                                       */
+/* Description     : This Function Stuck the execution of the program By      */
+/*                   using polling Technique.                                 */
+/* Argument        : None .                                                   */
+/* Return          : Error state of type ES_t.                                */
+/**.................***********************************************************/
+ES_t ADC_enuPollingSys(void)
 {
-	SET_BIT(ADC_ADCSRA_REG,ADC_ADIE);
-}
-/*
- * for compiler
- */
-void __vector_16(void) __attribute__(( signal , used ));
-void __vector_16(void)
+	ES_t Local_enuErrorState = ES_NOK ;
+
+
+	/* Monitor the ADC interrupt flag. */
+	while( !((ADCSRA>>ADIF)&ADC_MSK_BIT) );
+
+	/* Earase the flag.        */
+	ADCSRA |=(ADC_MSK_BIT<<ADIF);
+
+	/* Report the Final State.   */
+	return Local_enuErrorState    ;
+
+}//End of ADC_enuPollingSys.
+
+
+/********************************************************************************/
+/********************************************************************************/
+/* Function Name   : ADC_enuRead.                                               */
+/* Description     : Utility Function Read whole ten bits of ADC Data Register. */
+/* Argument        : Address Variable of u8 Type .                              */
+/* Return          : Error state of type ES_t.                                  */
+/**.................*************************************************************/
+ES_t ADC_enuRead(u16* Cpy_pu16Value )
 {
-	PF();
-}
-/*****************************************************************************************
- * function name: ADC_vdEnableAdcAutoTriggerMode
- * input        : void
- * return type  :void
- * Description  : this function is to enable auto trigger mode
- * **************************************************************************************
- */
-void ADC_vdEnableAdcAutoTriggerMode(void)
+	ES_t Local_enuErrorState = ES_NOK ;
+
+	*Cpy_pu16Value   =  ADCL ;
+
+	*Cpy_pu16Value  |=  ((u16)ADCH<< SHIFT_EIGHT_BIT) ;
+
+	/* Report the Final State.   */
+	return Local_enuErrorState    ;
+
+}//End of ADC_enuRead.
+
+
+
+
+/********************************************************************************/
+/********************************************************************************/
+/* Function Name   : ADC_enuReadHighValue.                                               */
+/* Description     : Utility Function Read whole ten bits of ADC Data Register. */
+/* Argument        : Address Variable of u8 Type .                              */
+/* Return          : Error state of type ES_t.                                  */
+/**.................*************************************************************/
+ES_t ADC_enuReadHighValue(u8 * Copy_pu8Value)
 {
-	SET_BIT(ADC_ADCSRA_REG,ADC_ADATE);
+	ES_t Local_enuErrorState = ES_NOK;
+
+
+	*Copy_pu8Value  = (ADCL >> 2);
+	*Copy_pu8Value |= (ADCH << 6);
+
+	return Local_enuErrorState;
 }
-/*****************************************************************************************
- * function name: ADC_AutoTrigger
- * input        : void
- * return type  :void
- * Description  : this function is to enable auto trigger mode and select trigger mode
- * **************************************************************************************
- */
-void ADC_AutoTrigger(void)
+
+
+
+
+
+/*********************************************************************************/
+/*********************************************************************************/
+/* Function Name   : ADC_enuSelectChannel.                                       */
+/* Description     : Function to Select a specific ADC Channel to read.          */
+/*                   using polling Technique.                                    */
+/* Argument        : The Selected channel:                                       */
+/*                                                                               */
+/*                 :Range:                                                       */
+/*                        ADC_CHANNEL_0  ,  ADC_CHANNEL_0_0  ,  ADC_CHANNEL_2_1  */
+/*                        ADC_CHANNEL_1  ,  ADC_CHANNEL_1_0  ,  ADC_CHANNEL_3_1  */
+/*                        ADC_CHANNEL_2  ,  ADC_CHANNEL_0_0  ,  ADC_CHANNEL_4_1  */
+/*                        ADC_CHANNEL_3  ,  ADC_CHANNEL_1_0  ,  ADC_CHANNEL_5_1  */
+/*                        ADC_CHANNEL_4  ,  ADC_CHANNEL_2_2  ,  ADC_CHANNEL_6_1  */
+/*                        ADC_CHANNEL_5  ,  ADC_CHANNEL_3_2  ,  ADC_CHANNEL_7_1  */
+/*                        ADC_CHANNEL_6  ,  ADC_CHANNEL_2_2  ,  ADC_CHANNEL_0_2  */
+/*                        ADC_CHANNEL_7  ,  ADC_CHANNEL_3_2  ,  ADC_CHANNEL_1_2  */
+/*                                          ADC_CHANNEL_0_1  ,  ADC_CHANNEL_2_2  */
+/*                                          ADC_CHANNEL_1_1  ,  ADC_CHANNEL_3_2  */
+/*                                                                               */
+/* Return          : Error state of type ES_t.                                   */
+/**......................*********************************************************/
+ES_t ADC_enuSelectChannel(u8 Cpy_u8ChannelID )
 {
-	ADC_vdEnableAdcAutoTriggerMode();
-#if ADC_AUTO_TRIGGER_MODE == ADC_Free_Running_Mode
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS0);
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS1);
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS2);
-#endif
+	ES_t Local_enuErrorState = ES_NOK ;
 
-#if ADC_AUTO_TRIGGER_MODE == ADC_Timer_Counter0_Compare_Match
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS0);
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS1);
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS2);
-#endif
+	/* Check that the Passed Arg. is in the Correct range. */
+	if( Cpy_u8ChannelID <= CHANNEL_4_2 )
+	{
+		/* Clearing the previous Choice.    */
+		ADMUX &=~( (ADC_MSK_BIT<<MUX4)|(ADC_MSK_BIT<<MUX3)|(ADC_MSK_BIT<<MUX2)|(ADC_MSK_BIT<<MUX1)|(ADC_MSK_BIT<<MUX0)  );
 
-#if ADC_AUTO_TRIGGER_MODE == ADC_Timer_Counter0_Overflow
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS0);
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS1);
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS2);
-#endif
+		/* Write the New Choice in the ADMUX Register. */
+		ADMUX |= Cpy_u8ChannelID ;
 
-#if ADC_AUTO_TRIGGER_MODE == ADC_Timer_Counter_Compare_Match_B
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS0);
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS1);
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS2);
-#endif
+		/* Report that the Selected channel has been Selected.*/
+		Local_enuErrorState = ES_OK ;
+	}
+	else
+	{
+		/* Report that the passed Channel is Not Valid to Selected.*/
+		Local_enuErrorState = ES_OUT_OF_RANGE ;
+	}
 
-#if ADC_AUTO_TRIGGER_MODE == ADC_Timer_Counter1_Overflow
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS0);
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS1);
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS2);
-#endif
+	/* Report the Final State.   */
+	return Local_enuErrorState    ;
 
-#if ADC_AUTO_TRIGGER_MODE == ADC_Timer_Counter1_Overflow
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS0);
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS1);
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS2);
-#endif
-
-
-#if ADC_AUTO_TRIGGER_MODE == ADC_External_Interrupt_Request
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS0);
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS1);
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS2);
-#endif
+}//End of ADC_enuSelectChannel.
 
 
 
-#if ADC_AUTO_TRIGGER_MODE == ADC_ANALOG_COMPARATOR
-	SET_BIT(ADC_SFIOR_REG,ADC_ADTS0);
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS1);
-	CLEAR_BIT(ADC_SFIOR_REG,ADC_ADTS2);
-#endif
 
+/*********************************************************************************/
+/*********************************************************************************/
+/* Function Name   : ADC_enuEnableTriggeringMode.                                */
+/* Description     : Function to Select  the ADC triggring source.               */
+/* Argument        : The Selected Triggerring Source.                            */
+/*                                                                               */
+/*                 : Range:                                                      */
+/*                         ADC_FREE_RUNNING        ,  ADC_EXTI0_OVF              */
+/*                         ADC_ANALOG_COMPARATOR   ,  ADC_EXTI0_CTC_B            */
+/*                         ADC_EXTI0               ,  ADC_EXTI1_OVF              */
+/*                         ADC_EXTI0_CTC           ,  ADC_EXTI1_CAP_EVNT         */
+/*                                                                               */
+/*                                                                               */
+/* Return          : Error state of type ES_t.                                   */
+/**..............................*************************************************/
+ES_t ADC_enuEnableTriggeringMode(u8 Cpy_u8TriggingSource)
+{
+	ES_t Local_enuErrorState = ES_NOK ;
+
+
+	if( Cpy_u8TriggingSource <= EXTI1_CAP_EVNT )
+	{
+		/* Disable auto triggering source.  */
+		ADCSRA  &=~(ADC_MSK_BIT<<ADATE);
+
+		/* Reset the Auto_triggering Source Selection Bits.                                 */
+		SFIOR &=~(  (ADC_MSK_BIT<<ADTS2) | ( ADC_MSK_BIT<<ADTS1 ) | (ADC_MSK_BIT<<ADTS0)   );
+
+		/* Switch to the Suitable Triggrinning Source.*/
+		switch( Cpy_u8TriggingSource )
+		{
+		case FREE_RUNNING :
+			break;
+
+		case ANALOG_COMPARATOR :
+			SFIOR |=(ADC_MSK_BIT<<ADTS0) ;
+			break;
+
+		case EXTI0 :
+			SFIOR |=(ADC_MSK_BIT<<ADTS1) ;
+			break;
+
+		case EXTI0_CTC :
+			SFIOR |=(ADC_MSK_BIT<<ADTS0) ;
+			SFIOR |=(ADC_MSK_BIT<<ADTS1) ;
+			break;
+
+		case EXTI0_OVF :
+			SFIOR |=(ADC_MSK_BIT<<ADTS2) ;
+			break;
+
+		case EXTI0_CTC_B :
+			SFIOR |=(ADC_MSK_BIT<<ADTS0) ;
+			SFIOR |=(ADC_MSK_BIT<<ADTS2) ;
+			break;
+
+		case EXTI1_OVF :
+			SFIOR |=(ADC_MSK_BIT<<ADTS2) ;
+			SFIOR |=(ADC_MSK_BIT<<ADTS1) ;
+			break;
+
+		case EXTI1_CAP_EVNT :
+			SFIOR |=(ADC_MSK_BIT<<ADTS0) ;
+			SFIOR |=(ADC_MSK_BIT<<ADTS1) ;
+			SFIOR |=(ADC_MSK_BIT<<ADTS2) ;
+
+			break;
+
+		default:;
+
+		}
+
+		//Enable auto triggering source.
+		ADCSRA  |=(ADC_MSK_BIT<<ADATE);
+
+		/* Report that the Triggerring Source has been Selected.*/
+		Local_enuErrorState = ES_OK ;
+	}
+	else
+	{
+		/* Report that the passed Triggerring Sourc is Not Valid.*/
+		Local_enuErrorState =  ES_OUT_OF_RANGE ;
+	}
+
+	/* Report the Final State.   */
+	return Local_enuErrorState    ;
+
+
+}//End of ADC_enuEnableTriggeringMode.
+
+
+
+
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuDisableTriggeringMode.                            */
+/* Description     : Utility Fuction to Disable the AutoTriggerring mode.     */
+/* Argument        : None.                                                    */
+/* Return          : Error state of type ES_t.                                */
+/**..............................**********************************************/
+ES_t ADC_enuDisableTriggeringMode(void)
+{
+	ES_t Local_enuErrorState = ES_NOK ;
+
+
+	// Check if the ADC is enabled.
+	if( ((ADCSRA>>ADATE)&ADC_MSK_BIT) )
+	{
+		// Disable the ADC.
+		ADCSRA  &=~(ADC_MSK_BIT<<ADATE);
+
+		// Update the Error State.
+		Local_enuErrorState = ES_OK ;
+	}
+	else
+	{
+		//Do nothing.
+	}
+
+	/* Report the Final State.   */
+	return Local_enuErrorState    ;
+
+}//End of ADC_enuDisableTriggeringMode.
+
+
+
+
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuEnableInterruptMode.                              */
+/* Description     : Utility Function to Enable the ADC interrupt when the    */
+/*                   Conversion is compolet.                                  */
+/* Argument        : None.                                                    */
+/* Return          : Error state of type ES_t.                                */
+/**............................************************************************/
+ES_t ADC_enuEnableInterruptMode(void)
+{
+	ES_t Local_enuErrorState = ES_NOK ;
+
+	/* -Check if the interrupt is already Enabled.  */
+	if( !((ADCSRA>>ADIE)&ADC_MSK_BIT) )
+	{
+		// Enable the ADC Interrupt.
+		ADCSRA |=(ADC_MSK_BIT<<ADIE);
+
+		// Update the Error State.
+		Local_enuErrorState = ES_OK ;
+	}
+	else
+	{
+		//Do nothing.
+	}
+
+	/* Report the Final State.   */
+	return Local_enuErrorState    ;
+
+}//End ofADC_enuEnableInterruptMode.
+
+
+
+
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuDisableInterruptMode.                             */
+/* Description     : Utility Function to Disable the ADC.                     */
+/* Argument        : None.                                                    */
+/* Return          : Error state of type ES_t.                                */
+/**.................***********************************************************/
+ES_t ADC_enuDisableInterruptMode(void)
+{
+	ES_t Local_enuErrorState = ES_NOK ;
+
+	/* Check if the interrupt is already Disabled.  */
+	if( ((ADCSRA>>ADIE)&ADC_MSK_BIT) )
+	{
+		// Disable the ADC interrupt.
+		ADCSRA &=~(ADC_MSK_BIT<<ADIE);
+
+		// Report that the interrupt is Disabled.
+		Local_enuErrorState = ES_OK ;
+	}
+	else
+	{
+		// Do nothing.
+	}
+
+	// Report the final State.
+	return Local_enuErrorState   ;
+
+}//End of ADC_enuDisableInterruptMode.
+
+
+
+
+
+
+
+
+/*********************************************************/
+/*********************************************************/
+/*********************************************************/
+ES_t ADC_enuCallBack(volatile void(*Cpy_pfunAppFunc)(void*) ,  void* Cpy_pvidAppPara)
+{
+	ES_t Local_enuErrorState = ES_NOK ;
+
+	if( Cpy_pfunAppFunc != NULL )
+	{
+		ADC_pvidfunISRFunc   = Cpy_pfunAppFunc ;
+
+		ADC_pvidISRParameter = Cpy_pvidAppPara ;
+
+		Local_enuErrorState  = ES_OK ;
+	}
+	else
+	{
+		Local_enuErrorState = ES_NULL_POINTER  ;
+	}
+
+	/* Report the Final State.   */
+	return Local_enuErrorState    ;
+
+}//End of
+
+
+ISR(VECT_ADC)
+{
+
+	if (ADC_pvidfunISRFunc != NULL)
+	{
+		ADC_pvidfunISRFunc(ADC_pvidISRParameter);
+	}
 
 }
+
+
+
+/****************************** END OF FILE  *********************************/
+/*****************************************************************************/
