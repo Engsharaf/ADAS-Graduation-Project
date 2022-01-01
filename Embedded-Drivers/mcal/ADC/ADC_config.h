@@ -1,12 +1,12 @@
 /*
- * ADC_Cnfg.h
+ * ADC_Config.h
  *
  *  Created on: Oct 13, 2021
  *      Author: Shaban
  */
 
-#ifndef ACD_CNFG_H_
-#define ACD_CNFG_H_
+#ifndef ACD_CONFIG_H_
+#define ACD_CONFIG_H_
 /*******************************************************************************/
 /*****************************     PUBLIC MACROS     ***************************/
 
@@ -40,4 +40,4 @@
 
 
 
-#endif /* ACD_CNFG_H_ */
+#endif /* ACD_CONFIG_H_ */
