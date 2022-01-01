@@ -1,169 +1,228 @@
 
 /*
- * ADC_interface.h
+ * ACD_interface.h
  *
- *  Created on: May 26, 2021
- *      Author: Abdelrahman sharaf
+ *  Created on: Oct 13, 2021
+ *      Author: Shaban
  */
 
-#ifndef ADC_INT_H_
-#define ADC_INT_H_
-/*
- * channels
- */
+#ifndef ADC_INTERFACE_H_
+#define ADC_INTERFACE_H_
+/*******************************************************************************/
+/*****************************     PUBLIC MACROS     ***************************/
+#define ADC_FREE_RUNNING             0
+#define ADC_ANALOG_COMPARATOR        1
+#define ADC_EXTI0                    2
+#define ADC_EXTI0_CTC                3
+#define ADC_EXTI0_OVF                4
+#define ADC_EXTI0_CTC_B              5
+#define ADC_EXTI1_OVF                6
+#define ADC_EXTI1_CAP_EVNT           7
+
+// Single Ended Mode.
+#define ADC_CHANNEL_0               0
+#define ADC_CHANNEL_1               1
+#define ADC_CHANNEL_2               2
+#define ADC_CHANNEL_3               3
+#define ADC_CHANNEL_4               4
+#define ADC_CHANNEL_5               5
+#define ADC_CHANNEL_6               6
+#define ADC_CHANNEL_7               7
+
+// Double Ended Mode.
+// #define ADC_CHANNEL_0_0           8    // Gain:  *10
+// #define ADC_CHANNEL_1_0           9    // Gain:  *10
+// #define ADC_CHANNEL_0_0           10   // Gain:  *200
+// #define ADC_CHANNEL_1_0           11   // Gain:  *200
+// #define ADC_CHANNEL_2_2           12   // Gain:  *10
+// #define ADC_CHANNEL_3_2           13   // Gain:  *10
+// #define ADC_CHANNEL_2_2           14   // Gain:  *200
+// #define ADC_CHANNEL_3_2           15   // Gain:  *200
+// #define ADC_CHANNEL_0_1           16   // Gain:  *1
+// #define ADC_CHANNEL_1_1           17   // Gain:  *1
+// #define ADC_CHANNEL_2_1           18   // Gain:  *1
+// #define ADC_CHANNEL_3_1           19   // Gain:  *1
+// #define ADC_CHANNEL_4_1           20   // Gain:  *1
+// #define ADC_CHANNEL_5_1           21   // Gain:  *1
+// #define ADC_CHANNEL_6_1           22   // Gain:  *1
+// #define ADC_CHANNEL_7_1           23   // Gain:  *1
+// #define ADC_CHANNEL_0_2           24   // Gain:  *1
+// #define ADC_CHANNEL_1_2           25   // Gain:  *1
+// #define ADC_CHANNEL_2_2           26   // Gain:  *1
+// #define ADC_CHANNEL_3_2           27   // Gain:  *1
+#define  ADC_CHANNEL_4_2           28   // Gain:  *1
 
 
-#define CHANNEL0 0
-#define CHANNEL1 1
-#define CHANNEL2 2
-#define CHANNEL3 3
-#define CHANNEL4 4
-#define CHANNEL5 5
-#define CHANNEL6 6
-#define CHANNEL7 7
-
-#define INVALID_VALUE 65535
-/*
- * voltage refernce
- */
-#define ADC_AREF                               1
-#define ADC_INTERNAL_VCC                       5
-#define ADC_INTERNAL_2_VOLT                    2
-/*
- * adjustment
- */
-#define ADC_RIGHT_ADJUSTMENT                   0
-#define ADC_LEFT_ADJUSTMENT                    1
-/*
- * ADCSRA register
- */
-#define ADC_ADEN                               7
-#define ADC_ADSC                               6
-#define ADC_ADATE                              5
-#define ADC_ADIF                               4
-#define ADC_ADIE                               3
-/*
- * admux_reg
- */
-#define ADC_REFS0                             6
-#define ADC_REFS1                             7
-#define ADC_ADLAR                             5
-#define ADC_DIVIDED_BY_2                       0x00
-#define ADC_DIVIDED_BY_4                       0x02
-#define ADC_DIVIDED_BY_8                       0x03
-#define ADC_DIVIDED_BY_16                      0x04
-#define ADC_DIVIDED_BY_32                      0x05
-#define ADC_DIVIDED_BY_64                      0x06
-#define ADC_DIVIDED_BY_128                     0x07
-/*
- * auto trigger modes
- */
-#define ADC_Free_Running_Mode                  0
-#define ADC_ANALOG_COMPARATOR                  1
-#define ADC_External_Interrupt_Request         2
-#define ADC_Timer_Counter0_Compare_Match       3
-#define ADC_Timer_Counter0_Overflow            4
-#define ADC_Timer_Counter_Compare_Match_B      5
-#define ADC_Timer_Counter1_Overflow            6
-#define ADC_Timer_Counter1_Capture Event       7
-/*
- * SFIOR
- */
-#define ADC_ADTS0 5
-#define ADC_ADTS1 6
-#define ADC_ADTS2 7
-
-/*****************************************************************************************
- * function name: ADC_vdEnableADC
- * input        :void
- * return type  :void
- * Description  : this function is to enable adc
- * **************************************************************************************
- */
-void ADC_vdEnableADC(void);
+/*******************************************************************************/
+/****************************    PUBLIC FUNCTIONS    ***************************/
 
 
-/*****************************************************************************************
- * function name: ADC_vdDisableADC
- * input        :void
- * return type  :void
- * Description  : this function is to disable adc
- * **************************************************************************************
- */
-void ADC_vdDisableADC(void);
+/*****************************************************************************/
+/*****************************************************************************/
+/* Function Name   : ADC_enuInit.                                            */
+/* Description     : Utility function to initialize the ADC .                */
+/* Argument        : None .                                                  */
+/* Return          : Error state of type ES_t.                               */
+/**.............**************************************************************/
+ES_t ADC_enuInit(void);
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuEnable.                                           */
+/* Description     : Utility function to Enable ADC .                         */
+/* Argument        : None .                                                   */
+/* Return          : Error state of type ES_t.                                */
+/**.....................*******************************************************/
+ES_t ADC_enuEnable(void);
 
 
-/*****************************************************************************************
- * function name: ADC_vdIntialize
- * input        :void
- * return type  :void
- * Description  : this function is to select voltage reference and ADC_prescalare
- * and setting ADC_ADJUSTMENT
- * **************************************************************************************
- */
-void ADC_vdIntialize(void);
+
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuDisable.                                          */
+/* Description     : Utility function to Disable ADC .                        */
+/* Argument        : None .                                                   */
+/* Return          : Error state of type ES_t.                                */
+/**.....................*******************************************************/
+ES_t ADC_enuDisable(void);
 
 
-/*****************************************************************************************
- * function name: ADC_vdGetADC_Value
- * input        :u8channel_id
- * return type  :ADC value
- * Description  : this function is to get ADC value for single channel
- * **************************************************************************************
- */
-u16 ADC_u16GetADC_Value(u8 u8channel_id);
 
 
-/*****************************************************************************************
- * function name: ADC_vdGetADC_ValueWithCommon_ADC1
- * input        :u8channel_id
- * return type  :ADC value
- * Description  : this function is to get ADC value for double channel with common
- * 				  negative edge ADC1
- * **************************************************************************************
- */
-u16 ADC_vdGetADC_ValueWithCommon_ADC1(u8 u8channel_id);
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuStartConversion.                                  */
+/* Description     : Utility function to Trigger ADC Start Conversion.        */
+/* Argument        : None .                                                   */
+/* Return          : Error state of type ES_t.                                */
+/**.................***********************************************************/
+ES_t ADC_enuStartConversion(void);
 
 
-/*****************************************************************************************
- * function name: ADC_vdSetADCISR_Callback
- * input        :pointer to function
- * return type  :void
- * Description  : this function is a call back function setter to set ADC ISR function
- * **************************************************************************************
- */
-void ADC_vdSetADCISR_Callback(void (*callback)(void));
 
 
-/*****************************************************************************************
- * function name: ADC_vdSetADCISR_Callback
- * input        :pointer to function
- * return type  :void
- * Description  : this function is a call back function setter to set ADC ISR function
- * **************************************************************************************
- */
-void ADC_vdEnableAdcInterrupt(void);
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuPollingSys.                                       */
+/* Description     : This Function Stuck the execution of the program By      */
+/*                   using polling Technique.                                 */
+/* Argument        : None .                                                   */
+/* Return          : Error state of type ES_t.                                */
+/**.................***********************************************************/
+ES_t ADC_enuPollingSys(void);
 
 
-/*****************************************************************************************
- * function name: ADC_vdEnableAdcAutoTriggerMode
- * input        : void
- * return type  :void
- * Description  : this function is to enable auto trigger mode
- * **************************************************************************************
- */
-void ADC_vdEnableAdcAutoTriggerMode(void);
 
 
-/*****************************************************************************************
- * function name: ADC_AutoTrigger
- * input        : void
- * return type  :void
- * Description  : this function is to enable auto trigger mode and select trigger mode
- * **************************************************************************************
- */
-void ADC_AutoTrigger(void);
+/********************************************************************************/
+/********************************************************************************/
+/* Function Name   : ADC_enuRead.                                               */
+/* Description     : Utility Function Read whole ten bits of ADC Data Register. */
+/* Argument        : Address Variable of u8 Type .                              */
+/* Return          : Error state of type ES_t.                                  */
+/**.................*************************************************************/
+ES_t ADC_enuRead(u16* Cpy_pu16Value );
 
-void ADC_vdGetAdcWithInterrupt(u8 u8channel_id);
-u16 ADC_u16ReadADCVal(void);
-#endif /* ADC_INT_H_ */
+
+
+/********************************************************************************/
+/********************************************************************************/
+/* Function Name   : ADC_enuReadHighValue.                                               */
+/* Description     : Utility Function Read whole ten bits of ADC Data Register. */
+/* Argument        : Address Variable of u8 Type .                              */
+/* Return          : Error state of type ES_t.                                  */
+/**.................*************************************************************/
+ES_t ADC_enuReadHighValue(u8 * Copy_pu8Value);
+
+
+
+
+
+/*********************************************************************************/
+/*********************************************************************************/
+/* Function Name   : ADC_enuSelectChannel.                                       */
+/* Description     : Function to Select a specific ADC Channel to read.          */
+/*                   using polling Technique.                                    */
+/* Argument        : The Selected channel:                                       */
+/*                                                                               */
+/*                 :Range:                                                       */
+/*                        ADC_CHANNEL_0  ,  ADC_CHANNEL_0_0  ,  ADC_CHANNEL_2_1  */
+/*                        ADC_CHANNEL_1  ,  ADC_CHANNEL_1_0  ,  ADC_CHANNEL_3_1  */
+/*                        ADC_CHANNEL_2  ,  ADC_CHANNEL_0_0  ,  ADC_CHANNEL_4_1  */
+/*                        ADC_CHANNEL_3  ,  ADC_CHANNEL_1_0  ,  ADC_CHANNEL_5_1  */
+/*                        ADC_CHANNEL_4  ,  ADC_CHANNEL_2_2  ,  ADC_CHANNEL_6_1  */
+/*                        ADC_CHANNEL_5  ,  ADC_CHANNEL_3_2  ,  ADC_CHANNEL_7_1  */
+/*                        ADC_CHANNEL_6  ,  ADC_CHANNEL_2_2  ,  ADC_CHANNEL_0_2  */
+/*                        ADC_CHANNEL_7  ,  ADC_CHANNEL_3_2  ,  ADC_CHANNEL_1_2  */
+/*                                          ADC_CHANNEL_0_1  ,  ADC_CHANNEL_2_2  */
+/*                                          ADC_CHANNEL_1_1  ,  ADC_CHANNEL_3_2  */
+/*                                                                               */
+/* Return          : Error state of type ES_t.                                   */
+/**......................*********************************************************/
+ES_t ADC_enuSelectChannel(u8 Cpy_u8ChannelID );
+
+
+
+
+/*********************************************************************************/
+/*********************************************************************************/
+/* Function Name   : ADC_enuEnableTriggeringMode.                                */
+/* Description     : Function to Select  the ADC triggring source.               */
+/* Argument        : The Selected Triggerring Source.                            */
+/*                                                                               */
+/*                 : Range:                                                      */
+/*                         ADC_FREE_RUNNING        ,  ADC_EXTI0_OVF              */
+/*                         ADC_ANALOG_COMPARATOR   ,  ADC_EXTI0_CTC_B            */
+/*                         ADC_EXTI0               ,  ADC_EXTI1_OVF              */
+/*                         ADC_EXTI0_CTC           ,  ADC_EXTI1_CAP_EVNT         */
+/*                                                                               */
+/*                                                                               */
+/* Return          : Error state of type ES_t.                                   */
+/**..............................*************************************************/
+ES_t ADC_enuEnableTriggeringMode(u8 Cpy_u8TriggingSource);
+
+
+
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuDisableTriggeringMode.                            */
+/* Description     : Utility Fuction to Disable the AutoTriggerring mode.     */
+/* Argument        : None.                                                    */
+/* Return          : Error state of type ES_t.                                */
+/**..............................**********************************************/
+ES_t ADC_enuDisableTriggeringMode(void) ;
+
+
+
+
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuEnableInterruptMode.                              */
+/* Description     : Utility Function to Enable the ADC interrupt when the    */
+/*                   Conversion is compolet.                                  */
+/* Argument        : None.                                                    */
+/* Return          : Error state of type ES_t.                                */
+/**............................************************************************/
+ES_t ADC_enuEnableInterruptMode(void);
+
+
+
+
+/******************************************************************************/
+/******************************************************************************/
+/* Function Name   : ADC_enuDisableInterruptMode.                             */
+/* Description     : Utility Function to Disable the ADC.                     */
+/* Argument        : None.                                                    */
+/* Return          : Error state of type ES_t.                                */
+/**.................***********************************************************/
+ES_t ADC_enuDisableInterruptMode(void);
+
+
+
+
+
+ES_t ADC_enuCallBack(volatile void(*Cpy_pfunAppFunc)(void*) ,  void* Cpy_pvidAppPara);
+
+
+
+
+#endif /* ADC_INTERFACE_H_ */
