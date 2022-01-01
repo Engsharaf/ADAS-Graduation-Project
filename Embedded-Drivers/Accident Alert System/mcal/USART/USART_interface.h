@@ -14,7 +14,8 @@
 #define SYNCRONOUS_MODE         1
 #define ASY_NORMAL_SPEED_MODE   2 
 #define ASY_DOUBLE_SPEED_MODE   3
-/*#define BAUD_RATE_9600        4 
+/*
+#define BAUD_RATE_9600          4 
 #define BAUD_RATE_4800          5 
 #define BAUD_RATE_115200        6
 #define DISABLE_PARITY          7
@@ -29,6 +30,7 @@
 #define CHARACTER_SIZE_7_BITS   16
 #define CHARACTER_SIZE_8_BITS   17
 #define CHARACTER_SIZE_9_BITS   18
+*/
 
 void USART_Init(void);
 
