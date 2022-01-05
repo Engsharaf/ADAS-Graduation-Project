@@ -26,7 +26,7 @@ void USART_Init(void)
     #if (MODE_OF_OPERATION == ASYNCRONOUS_MODE)
         CLR_BIT(UCSRC_LOC_TEMP , 6);
 
-    #elseif (MODE_OF_OPERATION == SYNCRONOUS_MODE)
+    #elif (MODE_OF_OPERATION == SYNCRONOUS_MODE)
         SET_BIT(UCSRC_LOC_TEMP , 6);
     
     #else 
@@ -171,12 +171,12 @@ void USART_Init(void)
 
 
 /* ---------------- Transmitting Data Function ------------------ */ 
-void USART_Transmit(u8 Data)
+void USART_Transmit(u8 data)
 {
     /* Wait for empty transmit buffer */
 	while(GET_BIT(UCSRA,5) == 0);
 	
-	/*	while ( !( UCSRA & (1<<UDRE)) );	*/
+	 /*while ( !( UCSRA & (1<<UDRE)) );	*/
 	
 	/* Insert data into buffer, sends the data */
 	UDR = data;
@@ -191,7 +191,7 @@ u8 USART_Receive(void)
 	/* clear the flag by writing logical one on it */
 	CLR_BIT(UCSRA , 7);
 	
-	/* while ( !(UCSRA & (1<<RXC)) );				*/
+	  /*while ( !(UCSRA & (1<<RXC)) );*/				
 	
 	/* Get and return received data from buffer 	*/
 	return UDR;

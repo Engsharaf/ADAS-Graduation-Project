@@ -11,7 +11,7 @@
 #define USART_CONFIG_H
 
 /* Insertion of F_CPU Speed that affects the Baud Rate */ 
-#define F_CPU				8000000
+#define F_CPU 1000000UL
 
 /* USART Selection Mode of Operation 
 Range : - ASYNCRONOUS_MODE   UCSRC Reg > Bit 6 : URSEL > 0
